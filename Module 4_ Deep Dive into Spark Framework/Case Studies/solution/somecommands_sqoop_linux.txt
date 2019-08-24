@@ -1,0 +1,85 @@
+
+# remove all files in directory
+# be careful
+hdfs dfs -rm -r /user/edureka_672184/*
+hdfs dfs -rm -r /user/edureka_672184/sq672184_employees2/*
+
+# rename database( i am renaming sql672184 to sq672184)
+Step 1: (this is how you dump database from mysql)
+
+mysqldump -h mysqldb.edu.cloudlab.com -u labuser --password=edureka -v sql672184> olddbdump.sql
+
+Data very big then add this option
+--no-data
+
+Step 2:
+mysqladmin -h mysqldb.edu.cloudlab.com -u labuser --password=edureka create sq672184
+
+Step3:
+mysql -h mysqldb.edu.cloudlab.com -u labuser --password=edureka sq672184< olddbdump.sql
+
+Login to database
+
+mysql -h mysqldb.edu.cloudlab.com -u labuser --password=edureka
+
+
+
+# sqoop import from database table
+sqoop import --connect jdbc:mysql://mysqldb.edu.cloudlab.com/sq672184 --username=labuser --password=edureka --table employee -m 1 -target-dir '/user/edureka_672184/sq672184_employees1'
+# see files
+hdfs dfs -ls '/user/edureka_672184/sq672184_employees1'
+# see output(must show all 9 rows)
+hdfs dfs -cat '/user/edureka_672184/sq672184_employees1/part-m-00000'
+
+# sqoop import from query
+sqoop import --connect jdbc:mysql://mysqldb.edu.cloudlab.com/sq672184 --username labuser --password edureka --query 'Select * from employee where $CONDITIONS limit 6' -m 1 -target-dir '/user/edureka_672184/sq672184_employees2'
+# see output(must show only 6 rows)
+hdfs dfs -cat '/user/edureka_672184/sq672184_employees2/part-m-00000'
+
+
+# incremental import(add more data to existing hdfs directory)
+# so adding row 7, 8 and 9(data after id = 6)
+sqoop import --connect jdbc:mysql://mysqldb.edu.cloudlab.com/sq672184 --username=labuser --password=edureka --table employee -target-dir '/user/edureka_672184/sq672184_employees2' --incremental append --check-column id --last-value 6 -m 1
+
+# now there are two directoryis, 00000 and 00001
+# check 00001
+hdfs dfs -cat '/user/edureka_672184/sq672184_employees2/part-m-00001'
+
+
+
+
+# Exporting
+
+
+CREATE TABLE emp LIKE employee; -- creates a new empty table emp with same structure as employee
+
+# import from hdfs directory to an empty mysql table
+
+sqoop export --connect jdbc:mysql://mysqldb.edu.cloudlab.com/sq672184 --username=labuser --password=edureka --table emp --export-dir /user/edureka_672184/sq672184_employees1
+
+# check it my connecting to mysql server, selectng database and run this query
+select * from emp;
+
+
+
+Code gen: used to creaet Data Access Object from database table
+
+
+sqoop codegen --connect jdbc:mysql://mysqldb.edu.cloudlab.com/sq121039 --username=labuser --password=edureka --table employee
+
+
+cat /tmp/sqoop-edureka_672184/compile/4cc2afc096f335babd1f0f93a1dbd688/employee.java
+
+you get a java file
+
+
+
+
+
+
+
+
+
+
+
+
